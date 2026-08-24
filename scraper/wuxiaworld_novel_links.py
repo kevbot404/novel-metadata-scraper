@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 
 BASE_URL = "https://wuxiaworld.site/novels-list/page/{}/?m_orderby=alphabet"
-TOTAL_PAGES = 526  # last checked 08/24/2026; last novel uploaded to site 03/07/2025
+TOTAL_PAGES = 1  # max=526, last checked 08/24/2026; last novel uploaded to site 03/07/2025
 DELAY = 1
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -79,7 +79,7 @@ def main():
 
     save_novels(novels)
 
-    print(f"Saved: {OUTPUT_FILE}")
+    print(f"Novel links saved to: {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":
