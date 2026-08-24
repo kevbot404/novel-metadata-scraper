@@ -21,6 +21,7 @@ pip install -r requirements.txt
 ```
 novel-metadata-collector/
 ├── main.py                           # CLI entry point
+├── helpers.py                        # Helper functions
 ├── requirements.txt                  # Dependencies
 ├── wuxiaworld_urls_example.txt       # WuxiaWorld URLs file example
 ├── royalroad_urls_example.txt        # RoyalRoad URLs file example
@@ -106,4 +107,23 @@ WuxiaWorld:
 
 RoyalRoad:
 
-Multi-value fields (e.g. `authors`, `genres`, `release_year`) are joined with `|`.
+- `title`
+- `url`
+- `authors`
+- `author_urls`
+- `tags`
+- `description`
+- `overall_score`
+- `style_score`
+- `story_score`
+- `grammar_score`
+- `character_score`
+- `total_views`
+- `average_views`
+- `followers`
+- `favorites`
+- `ratings`
+- `pages`
+- `word_count`
+
+Multi-value fields (e.g. `authors`, `tags`, `author_urls`) are joined with `|`.

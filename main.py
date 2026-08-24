@@ -7,6 +7,7 @@ from scraper.wuxiaworld_novel_links import (
 from scraper.wuxiaworld_metadata import (
     scrape_novel as scrape_wuxiaworld,
     scrape_urls as scrape_wuxiaworld_urls,
+    CSV_COLUMNS as WUXIAWORLD_CSV_COLUMNS,
 )
 
 from scraper.royalroad_novel_links import (
@@ -19,107 +20,17 @@ from scraper.royalroad_metadata import (
     CSV_COLUMNS as ROYALROAD_CSV_COLUMNS,
 )
 
+from helpers import (
+    get_float,
+    get_int,
+    get_input_path,
+    get_output_path,
+    print_result,
+    print_royalroad_result,
+)
+
 ROOT_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = ROOT_DIR / "results"
-
-
-def get_float(prompt, default):
-    value = input(f"{prompt} [{default}]: ").strip()
-
-    if not value:
-        return default
-
-    try:
-        return float(value)
-    except ValueError:
-        print(f"Invalid number. Using default: {default}")
-        return default
-
-
-def get_int(prompt, default):
-    value = input(f"{prompt} [{default}]: ").strip()
-
-    if not value:
-        return default
-
-    try:
-        return int(value)
-    except ValueError:
-        print(f"Invalid number. Using default: {default}")
-        return default
-
-
-def get_output_path(prompt, default):
-    value = input(f"{prompt} [{default}]: ").strip()
-
-    if not value:
-        return Path(default)
-
-    path = Path(value)
-
-    if path.is_absolute():
-        return path
-
-    if len(path.parts) == 1:
-        return RESULTS_DIR / path
-
-    return ROOT_DIR / path
-
-
-def get_input_path(prompt, default):
-    value = input(f"{prompt} [{default}]: ").strip()
-
-    if not value:
-        return Path(default)
-
-    path = Path(value)
-
-    if path.is_absolute():
-        return path
-
-    return ROOT_DIR / path
-
-
-def print_result(result):
-    fields = [
-        "title",
-        "url",
-        "rating",
-        "rating_count",
-        "rank",
-        "monthly_views",
-        "authors",
-        "genres",
-        "type",
-        "release_year",
-        "status",
-        "comments",
-        "bookmarks",
-        "first_chapter_url",
-        "last_chapter_url",
-        "last_chapter",
-        "summary",
-    ]
-
-    print("\n" + "=" * 80)
-    print("SCRAPING RESULT")
-    print("=" * 80)
-
-    for field in fields:
-        print(f"{field}: {result.get(field, 'N/A')}")
-
-    print("=" * 80)
-
-
-def print_royalroad_result(result):
-    print("\n" + "=" * 80)
-    print("SCRAPING RESULT")
-    print("=" * 80)
-
-    for field in ROYALROAD_CSV_COLUMNS:
-        print(f"{field}: {result.get(field, 'N/A')}")
-
-    print("=" * 80)
 
 
 def wuxiaworld_menu():
@@ -138,7 +49,9 @@ def wuxiaworld_menu():
 
         output_file = get_output_path(
             "Output file",
-            RESULTS_DIR / "wuxiaworld_novel_urls.txt"
+            RESULTS_DIR / "wuxiaworld_novel_urls.txt",
+            RESULTS_DIR,
+            ROOT_DIR,
         )
 
         delay = get_float("Delay between requests in seconds", 1)
@@ -193,7 +106,7 @@ def wuxiaworld_menu():
             result = scrape_wuxiaworld(url, timeout=timeout)
 
             print("\nScraping completed.")
-            print_result(result)
+            print_result(result, WUXIAWORLD_CSV_COLUMNS)
 
         except Exception as e:
             print(f"\nScraping failed: {e}")
@@ -205,12 +118,15 @@ def wuxiaworld_menu():
 
         urls_file = get_input_path(
             "URLs file",
-            ROOT_DIR / "wuxiaworld_urls_example.txt"
+            ROOT_DIR / "wuxiaworld_urls_example.txt",
+            ROOT_DIR,
         )
 
         output_file = get_output_path(
             "Output CSV file",
-            RESULTS_DIR / "wuxiaworld_novel_metadata.csv"
+            RESULTS_DIR / "wuxiaworld_novel_metadata.csv",
+            RESULTS_DIR,
+            ROOT_DIR,
         )
 
         delay = get_float("Delay between requests in seconds", 1)
@@ -262,6 +178,8 @@ def royalroad_menu():
         output_file = get_output_path(
             "Output file",
             RESULTS_DIR / "royalroad_novel_urls.txt",
+            RESULTS_DIR,
+            ROOT_DIR,
         )
 
         delay = get_float("Delay between requests in seconds", 1,)
@@ -311,7 +229,7 @@ def royalroad_menu():
             result = scrape_royalroad(url, timeout=timeout)
         
             print("\nScraping completed.")
-            print_royalroad_result(result)
+            print_royalroad_result(result, ROYALROAD_CSV_COLUMNS)
         
         except Exception as e:
             print(f"\nScraping failed: {e}")
@@ -323,12 +241,15 @@ def royalroad_menu():
         
         urls_file = get_input_path(
             "URLs file",
-            ROOT_DIR / "royalroad_urls_example.txt"
+            ROOT_DIR / "royalroad_urls_example.txt",
+            ROOT_DIR,
         )
         
         output_file = get_output_path(
             "Output CSV file",
-            RESULTS_DIR / "royalroad_novel_metadata.csv"
+            RESULTS_DIR / "royalroad_novel_metadata.csv",
+            RESULTS_DIR,
+            ROOT_DIR,
         )
         
         delay = get_float("Delay between requests in seconds", 1)
