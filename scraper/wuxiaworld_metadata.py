@@ -7,14 +7,15 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 RESULTS_DIR = ROOT_DIR / "results"
 
-URLS_FILE = RESULTS_DIR / "wuxiaworld_novel_urls.txt"
-OUTPUT_FILE = RESULTS_DIR / "wuxiaworld_novel_metadata.csv"
+DEFAULT_URLS_FILE = RESULTS_DIR / "wuxiaworld_novel_urls.txt"
+DEFAULT_OUTPUT_FILE = RESULTS_DIR / "wuxiaworld_novel_metadata.csv"
 
-DELAY = 1
-TIMEOUT = 30
+DEFAULT_DELAY = 1
+DEFAULT_TIMEOUT = 30
 
 BASE_URL = "https://wuxiaworld.site/"
 
@@ -144,7 +145,6 @@ def get_summary(soup):
 
     text = summary.get_text(" ", strip=True)
 
-    # Fallback in case the notice isn't wrapped in <b>/<strong>.
     text = re.sub(
         r"^(?:You’re|You're)\s+Reading.*?"
         r"WuxiaWorld\.Site(?:\s+|$)",
@@ -190,11 +190,12 @@ def get_chapter_info(soup, page_url):
     return first_url, last_url, last_chapter
 
 
-def scrape_novel(url):
+def scrape_novel(url, timeout=DEFAULT_TIMEOUT):
     response = session.get(
         url,
-        timeout=TIMEOUT
+        timeout=timeout
     )
+
     response.raise_for_status()
 
     soup = BeautifulSoup(
@@ -223,7 +224,6 @@ def scrape_novel(url):
         )
 
     rating = get_rating(soup)
-
     rating_count = get_rating_count(soup)
 
     rank_text = get_value(
@@ -355,18 +355,19 @@ def scrape_novel(url):
     }
 
 
-def load_checked_urls():
+def load_checked_urls(output_file):
     """
     Read URLs already successfully saved to the CSV.
 
     This makes the scraper resumable.
     """
     checked = set()
+    output_file = Path(output_file)
 
-    if not OUTPUT_FILE.exists():
+    if not output_file.exists():
         return checked
 
-    with OUTPUT_FILE.open(
+    with output_file.open(
         "r",
         newline="",
         encoding="utf-8",
@@ -382,16 +383,42 @@ def load_checked_urls():
     return checked
 
 
-def main():
-    RESULTS_DIR.mkdir(exist_ok=True)
+def scrape_urls(
+    urls_file=DEFAULT_URLS_FILE,
+    output_file=DEFAULT_OUTPUT_FILE,
+    delay=DEFAULT_DELAY,
+    timeout=DEFAULT_TIMEOUT,
+):
+    """
+    Scrape metadata from all URLs in a URL file.
 
-    if not URLS_FILE.exists():
-        print(
-            f"ERROR: URL file not found: {URLS_FILE}"
+    The scraper is resumable: URLs already present in the
+    output CSV are skipped.
+    """
+    urls_file = Path(urls_file)
+    output_file = Path(output_file)
+
+    if not urls_file.exists():
+        raise FileNotFoundError(
+            f"URL file not found: {urls_file}"
         )
-        return
 
-    with URLS_FILE.open(
+    if delay < 0:
+        raise ValueError(
+            "delay cannot be negative"
+        )
+
+    if timeout <= 0:
+        raise ValueError(
+            "timeout must be greater than 0"
+        )
+
+    output_file.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    with urls_file.open(
         "r",
         encoding="utf-8",
     ) as f:
@@ -401,7 +428,12 @@ def main():
             if line.strip()
         ]
 
-    checked_urls = load_checked_urls()
+    # Remove duplicate URLs while preserving order.
+    urls = list(dict.fromkeys(urls))
+
+    checked_urls = load_checked_urls(
+        output_file
+    )
 
     remaining = [
         url
@@ -410,7 +442,7 @@ def main():
     ]
 
     print(
-        f"Total URLs: {len(urls)}"
+        f"Total URLs:     {len(urls)}"
     )
 
     print(
@@ -418,14 +450,21 @@ def main():
     )
 
     print(
-        f"Remaining: {len(remaining)}"
+        f"Remaining:      {len(remaining)}"
     )
+
+    if not remaining:
+        print("\nNothing left to scrape.")
+        print(
+            f"Metadata saved to: {output_file}"
+        )
+        return
 
     print()
 
-    file_exists = OUTPUT_FILE.exists()
+    file_exists = output_file.exists()
 
-    with OUTPUT_FILE.open(
+    with output_file.open(
         "a",
         newline="",
         encoding="utf-8",
@@ -438,7 +477,7 @@ def main():
 
         if (
             not file_exists
-            or OUTPUT_FILE.stat().st_size == 0
+            or output_file.stat().st_size == 0
         ):
             writer.writeheader()
             f.flush()
@@ -452,11 +491,15 @@ def main():
             )
 
             try:
-                metadata = scrape_novel(url)
+                metadata = scrape_novel(
+                    url,
+                    timeout=timeout
+                )
 
                 writer.writerow(metadata)
 
-                # Save immediately.
+                # Save immediately so the scraper
+                # can safely resume if interrupted.
                 f.flush()
 
                 print(
@@ -473,14 +516,16 @@ def main():
                     f"ERROR: {e}"
                 )
 
-            time.sleep(DELAY)
+            # Don't wait after the final URL.
+            if index < len(remaining):
+                time.sleep(delay)
 
     print()
     print("Finished.")
     print(
-        f"Metadata saved to: {OUTPUT_FILE}"
+        f"Metadata saved to: {output_file}"
     )
 
 
 if __name__ == "__main__":
-    main()
+    scrape_urls()

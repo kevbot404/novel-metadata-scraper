@@ -1,6 +1,6 @@
 # novel-metadata-collector
 
-A multi-source metadata scraper for Light, Wuxia and Web Novels.
+A CLI tool for scraping metadata from Light, Wuxia and Web Novel hosting sites. Supports batch scraping with resumable execution and structured CSV output.
 
 ## Features
 
@@ -8,6 +8,7 @@ A multi-source metadata scraper for Light, Wuxia and Web Novels.
 - Resumable scraping (skips URLs already saved to CSV)
 - Saves structured metadata to CSV
 - Configurable request delay and timeouts
+- Batch novel link collection from listing pages
 
 ## Installation
 
@@ -15,29 +16,59 @@ A multi-source metadata scraper for Light, Wuxia and Web Novels.
 pip install -r requirements.txt
 ```
 
+## Project Structure
+
+```
+novel-metadata-collector/
+├── main.py                           # CLI entry point
+├── requirements.txt                  # Dependencies
+├── wuxiaworld_urls_example.txt       # URLs file example
+├── scraper/
+│   ├── wuxiaworld_novel_links.py     # WuxiaWorld listing page scraper
+│   └── wuxiaworld_metadata.py        # WuxiaWorld novel page scraper
+└── results/                          # Default output folder
+```
+
+## Dependencies
+
+- `requests` — HTTP client with session reuse and configurable timeouts
+- `beautifulsoup4` — HTML parsing for novel metadata extraction
+
 ## Usage
 
-Run the full WuxiaWorld pipeline (get novel links & scrape metadata):
+Run the interactive CLI menu:
 
 ```bash
-python scraper/wuxiaworld-full.py
+python main.py
 ```
 
-Or run individual stages:
+### Menu Options
 
-```bash
-python scraper/wuxiaworld-novel-links.py # (change TOTAL_PAGES to 526 to scrape every novel link in site)
-python scraper/wuxiaworld-metadata.py
-```
+**1) Scrape WuxiaWorld Novels**
 
-Output is saved to the `results/` directory.
+Opens a submenu with three modes:
+
+1. **Scrape novel links** — crawl WuxiaWorld's novel listing pages and collect novel URLs into a text file.
+   - Prompts for: total pages, output file path, delay between requests, request timeout
+
+2. **Scrape single novel** — fetch and display metadata for one novel in the terminal.
+   - Prompts for: novel URL, request timeout
+
+3. **Scrape novels from URL file** — batch scrape metadata from a list of URLs with resumable execution.
+   - Prompts for: URLs file path, output CSV path, delay between requests, request timeout
+
+Already-scraped URLs (present in the output CSV) are automatically skipped, so interrupted runs can be resumed without re-scraping completed novels.
+
+**2) Scrape RoyalRoad Novels**
+
+Not yet implemented.
 
 ## Supported Websites
 
-| Website                                 | Status    | Output                                  |
-| --------------------------------------- | --------- | --------------------------------------- |
-| [WuxiaWorld](https://wuxiaworld.site/)  | Supported | `results/wuxiaworld_novel_metadata.csv` |
-| [RoyalRoad](https://www.royalroad.com/) | Planned   | -                                       |
+| Website                                 | Status    |
+| --------------------------------------- | --------- |
+| [WuxiaWorld](https://wuxiaworld.site/)  | Supported |
+| [RoyalRoad](https://www.royalroad.com/) | Planned   |
 
 ## Output Fields
 
@@ -60,3 +91,5 @@ The CSV includes the following fields:
 - `last_chapter_url`
 - `last_chapter`
 - `summary`
+
+Multi-value fields (e.g. `authors`, `genres`, `release_year`) are joined with `|`.
