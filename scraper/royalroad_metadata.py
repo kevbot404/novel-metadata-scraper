@@ -1,4 +1,5 @@
 import csv
+import random
 import re
 import time
 from pathlib import Path
@@ -6,6 +7,8 @@ from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -53,8 +56,40 @@ CSV_COLUMNS = [
     "word_count",
 ]
 
-session = requests.Session()
-session.headers.update(HEADERS)
+
+def build_session():
+    """
+    Build a requests Session with retry/backoff and a warm-up request.
+
+    The first several requests from a fresh session sometimes get
+    blocked (connection aborted, 404, etc.). Hitting the homepage first lets the
+    session pick up cookies.
+    """
+    session = requests.Session()
+    session.headers.update(HEADERS)
+
+    retry = Retry(
+        total=5,
+        backoff_factor=2,  # 2s, 4s, 8s, 16s, 32s
+        status_forcelist=[403, 404, 429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    # Warm up: grab cookies from the homepage before scraping anything
+    try:
+        session.get(BASE_URL, timeout=DEFAULT_TIMEOUT)
+        time.sleep(1.5)
+    except requests.RequestException:
+        pass
+
+    return session
+
+
+session = build_session()
 
 
 def clean_text(text):
@@ -384,7 +419,7 @@ def scrape_urls(
 
             # Don't wait after the final URL.
             if index < len(remaining):
-                time.sleep(delay)
+                time.sleep(delay + random.uniform(0, 0.5))
 
     print()
     print("Finished.")
